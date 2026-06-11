@@ -5,9 +5,9 @@ namespace App\Jobs;
 use App\Enums\VideoIdeaStatus;
 use App\Enums\WorkflowStep;
 use App\Jobs\Concerns\TracksWorkflowRun;
-use App\Models\PromptTemplate;
 use App\Models\VideoIdea;
 use App\Services\OpenAiTextService;
+use App\Support\IdeaGenerationPrompt;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Throwable;
@@ -29,9 +29,9 @@ class GenerateIdeasJob implements ShouldQueue
             throw new \RuntimeException("Unknown content pillar: {$this->contentPillar}");
         }
 
-        $template = PromptTemplate::activeFor(WorkflowStep::IdeaGeneration);
+        $prompt = IdeaGenerationPrompt::render($this->contentPillar);
 
-        if (! $template) {
+        if (! $prompt) {
             throw new \RuntimeException('No active idea generation prompt template.');
         }
 
@@ -40,14 +40,6 @@ class GenerateIdeasJob implements ShouldQueue
         ]);
 
         try {
-            $prompt = $template->render([
-                'pillar_name' => $pillar['name'],
-                'pillar_description' => $pillar['description'],
-                'pillar_examples' => implode(', ', $pillar['examples']),
-                'klaus_angle' => $pillar['klaus_angle'],
-                'disclaimer' => config('klaus.disclaimer'),
-            ]);
-
             $result = $openAi->chat(
                 'You generate satirical short-form video ideas for Klaus vom Amt. Return JSON only.',
                 $prompt,

@@ -11,10 +11,10 @@ class AdminUserSeeder extends Seeder
     public function run(): void
     {
         User::query()->updateOrCreate(
-            ['email' => 'admin@klaus-vom-amt.local'],
+            ['email' => config('klaus.local_admin.email')],
             [
                 'name' => 'Klaus Admin',
-                'password' => Hash::make('klaus-admin-change-me'),
+                'password' => Hash::make(config('klaus.local_admin.password')),
                 'email_verified_at' => now(),
             ],
         );

@@ -40,6 +40,8 @@ class GenerateImagePromptJob implements ShouldQueue
             $prompt = $template->render([
                 'idea' => $this->videoIdea->title.': '.$this->videoIdea->short_concept,
                 'script' => $this->videoIdea->script,
+                'character_lock' => config('klaus.character_lock'),
+                'visual_style' => config('klaus.visual_style'),
             ]);
 
             $result = $openAi->chat(

@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Pages\Auth\Login;
 use App\Filament\Widgets\KlausStatsOverview;
 use App\Filament\Widgets\LatestWorkflowRunsWidget;
 use Filament\Http\Middleware\Authenticate;
@@ -28,7 +29,7 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
-            ->login()
+            ->login(Login::class)
             ->brandName('Klaus vom Amt Video Factory')
             ->colors([
                 'primary' => Color::Amber,

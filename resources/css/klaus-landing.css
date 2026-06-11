@@ -1,0 +1,98 @@
+@import 'tailwindcss';
+
+@source '../views/landing.blade.php';
+@source '../views/layouts/klaus.blade.php';
+@source '../views/components/klaus/**/*.blade.php';
+
+@theme {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+    --color-klaus-pink: #f3a6c8;
+    --color-klaus-pink-dark: #e889b8;
+    --color-klaus-cream: #fff8f0;
+    --color-klaus-cream-dark: #f5ead8;
+    --color-klaus-black: #1a1a1a;
+    --color-klaus-red: #c0392b;
+}
+
+@layer base {
+    html {
+        scroll-behavior: smooth;
+    }
+
+    [x-cloak] {
+        display: none !important;
+    }
+
+    body {
+        @apply bg-klaus-cream text-klaus-black antialiased;
+    }
+
+    button:not(:disabled),
+    a[href],
+    label[for],
+    select,
+    summary {
+        @apply cursor-pointer;
+    }
+}
+
+@layer components {
+    .klaus-card {
+        @apply rounded-2xl border-3 border-klaus-black bg-white p-5 shadow-[4px_4px_0_0_#1a1a1a];
+    }
+
+    .klaus-btn {
+        @apply inline-flex cursor-pointer items-center justify-center rounded-xl border-3 border-klaus-black bg-klaus-pink px-5 py-3 text-sm font-bold uppercase tracking-wide text-klaus-black shadow-[3px_3px_0_0_#1a1a1a] transition hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[5px_5px_0_0_#1a1a1a] active:translate-x-0.5 active:translate-y-0.5 active:shadow-[1px_1px_0_0_#1a1a1a];
+    }
+
+    .klaus-btn-secondary {
+        @apply bg-klaus-cream-dark;
+    }
+
+    .klaus-btn-stamp {
+        @apply bg-klaus-red text-white;
+    }
+
+    .klaus-section {
+        @apply scroll-mt-24 py-16 md:py-20;
+    }
+
+    .klaus-input {
+        @apply w-full rounded-xl border-3 border-klaus-black bg-white px-4 py-3 text-klaus-black placeholder:text-klaus-black/40 focus:outline-none focus:ring-2 focus:ring-klaus-pink;
+    }
+
+    .klaus-label {
+        @apply mb-2 block text-sm font-bold uppercase tracking-wide;
+    }
+
+    .klaus-stat {
+        @apply rounded-2xl border-3 border-klaus-black bg-white p-5 text-center shadow-[4px_4px_0_0_#1a1a1a];
+    }
+
+    .klaus-nav-link {
+        @apply cursor-pointer rounded-lg px-3 py-2 text-sm font-semibold transition hover:bg-klaus-pink/30;
+    }
+
+    .klaus-icon-badge {
+        @apply flex h-10 w-10 items-center justify-center rounded-full border-3 border-klaus-black bg-klaus-pink;
+    }
+
+    button.klaus-icon-badge,
+    button.klaus-card {
+        @apply cursor-pointer;
+    }
+
+    .klaus-social-link {
+        @apply inline-flex cursor-pointer items-center gap-2 rounded-xl border-3 border-klaus-black bg-white px-4 py-2.5 text-klaus-black shadow-[3px_3px_0_0_#1a1a1a] transition hover:-translate-x-0.5 hover:-translate-y-0.5 hover:bg-klaus-pink hover:shadow-[5px_5px_0_0_#1a1a1a];
+    }
+
+    .klaus-social-link-dark {
+        @apply border-klaus-cream/30 bg-klaus-black text-klaus-cream shadow-[3px_3px_0_0_#f3a6c8] hover:bg-klaus-pink hover:text-klaus-black;
+    }
+}
+
+@layer utilities {
+    .border-3 {
+        border-width: 3px;
+    }
+}

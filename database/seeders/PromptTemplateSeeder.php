@@ -67,7 +67,7 @@ PROMPT,
                 'name' => 'Klaus Image Prompt (9:16)',
                 'workflow_step' => WorkflowStep::ImagePromptGeneration,
                 'prompt' => <<<'PROMPT'
-Create a vertical 9:16 image prompt for Klaus vom Amt.
+Create a vertical 9:16 image prompt.
 
 Video idea:
 {{idea}}
@@ -76,40 +76,10 @@ Script:
 {{script}}
 
 Character:
-Klaus vom Amt.
-German bureaucrat.
-52 years old.
-Short dark-blond hair.
-Slightly receding hairline.
-Clean-shaven.
-Neutral expression.
-Mild disappointment.
-Looks permanently tired of humanity.
-Beige government office jacket.
-White shirt.
-Dark trousers.
-Practical black shoes.
-Holding clipboard.
+{{character_lock}}
 
-Style:
-Modern viral social-media illustration.
-Bold thick black outlines.
-Clean vector-cartoon aesthetic.
-Semi-realistic facial features.
-Slight caricature proportions.
-Bright saturated colors.
-High-contrast cel shading.
-Flat pastel background.
-Minimal environmental details.
-Large negative space for captions.
-Character centered.
-Strong silhouette.
-No photographic textures.
-No painterly effects.
-No realism.
-No clutter.
-Ultra sharp.
-TikTok/Reels/Shorts optimized.
+Visual style:
+{{visual_style}}
 
 Return valid JSON only:
 {
