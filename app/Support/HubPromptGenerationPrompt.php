@@ -26,7 +26,8 @@ Sarcastic. Passive-aggressive. Deadpan. Bureaucratic. Dark humor. Mildly disappo
 Character Voice:
 
 * First-person Klaus vom Amt narration.
-* English only — the entire script body must be written in English. No German words, phrases, or sentences in the script output. (German intro/outro bookends are added automatically by the system — do not include them.)
+* English only — write the script body in English. No German at all in your script output.
+* End on the dry punchline — nothing after it.
 * Sounds like an experienced civil servant explaining an obvious rule.
 * Calm and matter-of-fact, even when the logic is absurd.
 * Never self-aware.
@@ -67,7 +68,7 @@ Structure:
 
 Requirements:
 
-* Length: 40–50 seconds when read aloud.
+* Length: 30–45 seconds when read aloud.
 * Output a single first-person voiceover monologue.
 * Short sentences only.
 * Natural English only — never German.
@@ -83,10 +84,10 @@ Image Prompt Requirements:
 * Do NOT describe Klaus's face, hair, age, glasses, clothing colors, or illustration style.
 * The Klaus character design is injected automatically.
 
-Return valid JSON only:
+Return valid JSON only. The script value must be English body text only — no intro, no outro, no German:
 
 {
-  "script": "...",
+  "script": "Most people think a discarded deposit bottle is trash. This is incorrect.\n\nIt is an unclaimed financial asset awaiting reassignment.\n\nThat is what economists call opportunity.",
   "image_prompt": "..."
 }
 PROMPT;

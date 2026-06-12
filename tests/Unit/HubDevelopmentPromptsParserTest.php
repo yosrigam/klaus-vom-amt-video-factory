@@ -21,8 +21,26 @@ JSON;
 
         $parsed = HubDevelopmentPromptsParser::parse($json);
 
-        $this->assertStringContainsString('Klaus vom Amt', $parsed['script']);
+        $this->assertSame('Unfortunately, your sponge usage requires review.', $parsed['script']);
         $this->assertStringContainsString('sponge', $parsed['image_prompt']);
+    }
+
+    #[Test]
+    public function it_strips_manually_added_german_bookends_from_pasted_json(): void
+    {
+        $json = <<<'JSON'
+{
+  "script": "Klaus vom Amt hier.\n\nMost people think a discarded deposit bottle is trash.\n\nThat is what economists call opportunity.\n\nDer Vorgang ist abgeschlossen.\n\nAuf Wiedersehen.",
+  "image_prompt": "Klaus with bottles on pedestals, solid turquoise background."
+}
+JSON;
+
+        $parsed = HubDevelopmentPromptsParser::parse($json);
+
+        $this->assertStringNotContainsString('Der Vorgang ist abgeschlossen', $parsed['script']);
+        $this->assertStringNotContainsString('Auf Wiedersehen', $parsed['script']);
+        $this->assertStringNotContainsString('Klaus vom Amt hier', $parsed['script']);
+        $this->assertStringContainsString('economists call opportunity', $parsed['script']);
     }
 
     #[Test]

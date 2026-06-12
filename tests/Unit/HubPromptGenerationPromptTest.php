@@ -16,6 +16,8 @@ class HubPromptGenerationPromptTest extends TestCase
         $this->assertStringContainsString('Sunday mowing tribunal', $prompt);
         $this->assertStringContainsString(config('klaus.disclaimer'), $prompt);
         $this->assertStringContainsString('English only', $prompt);
+        $this->assertStringContainsString('Der Vorgang ist abgeschlossen', $prompt);
+        $this->assertStringContainsString('no intro, no outro', $prompt);
         $this->assertStringContainsString('Return valid JSON only', $prompt);
     }
 

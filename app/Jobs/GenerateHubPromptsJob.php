@@ -37,8 +37,9 @@ class GenerateHubPromptsJob implements ShouldQueue
                 $prompt,
             );
 
-            $script = KlausScriptBookends::apply(trim($result['script'] ?? ''));
+            $body = KlausScriptBookends::sanitizeBody(trim($result['script'] ?? ''));
             $imagePrompt = trim($result['image_prompt'] ?? '');
+            $script = KlausScriptBookends::apply($body);
 
             if ($script === '' || $imagePrompt === '') {
                 throw new \RuntimeException('Content generation returned incomplete script or image prompt.');
@@ -48,7 +49,7 @@ class GenerateHubPromptsJob implements ShouldQueue
                 'script' => $script,
                 'image_prompt' => KlausImagePrompt::buildFull($imagePrompt),
                 'chatgpt_development_response' => HubDevelopmentPromptsParser::encode([
-                    'script' => $script,
+                    'script' => $body,
                     'image_prompt' => $imagePrompt,
                 ]),
                 'status' => HubIdeaStatus::ContentReady,

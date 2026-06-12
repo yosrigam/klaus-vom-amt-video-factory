@@ -35,11 +35,13 @@ class HubGenerateVoiceJob implements ShouldQueue
             throw new \RuntimeException('Voice script is required.');
         }
 
+        $body = KlausScriptBookends::sanitizeBody($rawScript);
+
         if ($profile->applyFormatter) {
-            $rawScript = AwkwardNarrationFormatter::format($rawScript);
+            $body = AwkwardNarrationFormatter::format($body);
         }
 
-        $text = KlausScriptBookends::apply($rawScript);
+        $text = KlausScriptBookends::apply($body);
 
         $this->hubIdea->update(['script' => $text, 'error_message' => null]);
 

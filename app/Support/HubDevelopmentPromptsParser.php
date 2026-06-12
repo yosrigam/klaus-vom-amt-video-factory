@@ -41,7 +41,7 @@ class HubDevelopmentPromptsParser
         }
 
         return [
-            'script' => $script,
+            'script' => KlausScriptBookends::sanitizeBody($script),
             'image_prompt' => $imagePrompt,
         ];
     }

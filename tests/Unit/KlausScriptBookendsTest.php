@@ -31,6 +31,28 @@ class KlausScriptBookendsTest extends TestCase
     }
 
     #[Test]
+    public function it_strips_english_outro_before_applying_german_bookends(): void
+    {
+        $script = KlausScriptBookends::apply(
+            "He washed his car on a Sunday.\n\nThe process is complete.",
+        );
+
+        $this->assertStringNotContainsString('The process is complete', $script);
+        $this->assertSame(1, substr_count($script, 'Der Vorgang ist abgeschlossen.'));
+        $this->assertStringEndsWith("\n\nDer Vorgang ist abgeschlossen.\n\nAuf Wiedersehen.", $script);
+    }
+
+    #[Test]
+    public function it_strips_english_outro_lines_from_the_body_even_before_german_bookends(): void
+    {
+        $body = KlausScriptBookends::sanitizeBody(
+            "He washed his car.\n\nThe process is complete.\n\nDer Vorgang ist abgeschlossen.\n\nAuf Wiedersehen.",
+        );
+
+        $this->assertSame('He washed his car.', $body);
+    }
+
+    #[Test]
     public function it_matches_the_new_outro_for_german_voice(): void
     {
         $this->assertTrue(KlausScriptBookends::matchesOutro('Der Vorgang ist abgeschlossen.'));

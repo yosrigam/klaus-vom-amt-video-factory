@@ -223,18 +223,19 @@ class EditHubIdea extends EditRecord
             return;
         }
 
-        $parsed['script'] = KlausScriptBookends::apply($parsed['script']);
+        $parsed = HubDevelopmentPromptsParser::parse($json);
+        $voiceScript = KlausScriptBookends::apply($parsed['script']);
         $storedJson = HubDevelopmentPromptsParser::encode($parsed);
         $fullImagePrompt = KlausImagePrompt::buildFull($parsed['image_prompt']);
 
-        if ($this->record->script === $parsed['script']
+        if ($this->record->script === $voiceScript
             && $this->record->image_prompt === $fullImagePrompt
             && $this->record->chatgpt_development_response === $storedJson) {
             return;
         }
 
         $this->record->update([
-            ...$parsed,
+            'script' => $voiceScript,
             'image_prompt' => $fullImagePrompt,
             'chatgpt_development_response' => $storedJson,
             'status' => HubIdeaStatus::ContentReady,
@@ -242,7 +243,7 @@ class EditHubIdea extends EditRecord
 
         if ($set !== null) {
             $set('chatgpt_development_response', $storedJson);
-            $set('script', $parsed['script']);
+            $set('script', $voiceScript);
             $set('image_prompt', $fullImagePrompt);
         }
 
