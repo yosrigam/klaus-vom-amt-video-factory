@@ -1,6 +1,7 @@
 @import 'tailwindcss';
 
 @source '../views/landing.blade.php';
+@source '../views/legal/**/*.blade.php';
 @source '../views/layouts/klaus.blade.php';
 @source '../views/components/klaus/**/*.blade.php';
 

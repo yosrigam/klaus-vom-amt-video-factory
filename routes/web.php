@@ -5,6 +5,9 @@ use Illuminate\Support\Facades\Storage;
 
 Route::get('/', fn () => view('landing'));
 
+Route::view('/terms-of-service', 'legal.terms-of-service')->name('legal.terms');
+Route::view('/privacy-policy', 'legal.privacy-policy')->name('legal.privacy');
+
 Route::get('/klaus-media/{path}', function (string $path) {
     abort_unless(Storage::disk('local')->exists($path), 404);
 

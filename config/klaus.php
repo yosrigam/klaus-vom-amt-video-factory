@@ -21,6 +21,12 @@ return [
         'youtube' => 'https://www.youtube.com/@Klaus.vomamt',
         'tiktok' => 'https://www.tiktok.com/@klaus.vom.amt',
     ],
+
+    'legal' => [
+        'contact_email' => env('KLAUS_CONTACT_EMAIL', 'hello@klausvomamt.com'),
+        'terms_url' => env('KLAUS_TERMS_URL'),
+        'privacy_url' => env('KLAUS_PRIVACY_URL'),
+    ],
     'ffmpeg_path' => env('FFMPEG_PATH', '/usr/bin/ffmpeg'),
     'edge_tts_path' => env('EDGE_TTS_PATH', 'edge-tts'),
     'edge_tts_voice' => env('EDGE_TTS_VOICE', 'de-DE-ConradNeural'),
