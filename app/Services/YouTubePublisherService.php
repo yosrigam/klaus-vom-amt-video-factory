@@ -34,6 +34,7 @@ class YouTubePublisherService
         ];
 
         $init = Http::withToken($accessToken)
+            ->withHeaders(['Content-Type' => 'application/json; charset=UTF-8'])
             ->withQueryParameters(['uploadType' => 'resumable', 'part' => 'snippet,status'])
             ->post('https://www.googleapis.com/upload/youtube/v3/videos', $metadata);
 
@@ -41,15 +42,23 @@ class YouTubePublisherService
             throw new RuntimeException('YouTube upload init failed: '.$init->body());
         }
 
-        $uploadUrl = $init->header('Location')[0] ?? null;
+        $uploadUrl = $init->header('Location');
+
+        if (is_array($uploadUrl)) {
+            $uploadUrl = $uploadUrl[0] ?? null;
+        }
 
         if (! $uploadUrl) {
             throw new RuntimeException('YouTube upload URL missing.');
         }
 
+        $videoBytes = file_get_contents($videoPath);
         $upload = Http::withToken($accessToken)
-            ->withHeaders(['Content-Type' => 'video/mp4'])
-            ->withBody(file_get_contents($videoPath), 'video/mp4')
+            ->withHeaders([
+                'Content-Type' => 'video/mp4',
+                'Content-Length' => (string) strlen($videoBytes),
+            ])
+            ->withBody($videoBytes, 'video/mp4')
             ->put($uploadUrl);
 
         if (! $upload->successful()) {

@@ -26,10 +26,13 @@ class TikTokPublisherService
             ->post('https://open.tiktokapis.com/v2/post/publish/video/init/', [
                 'post_info' => [
                     'title' => $idea->publish_title ?? $idea->title,
-                    'privacy_level' => 'PUBLIC_TO_EVERYONE',
+                    'privacy_level' => config('services.tiktok.privacy_level', 'SELF_ONLY'),
                     'disable_duet' => false,
                     'disable_comment' => false,
                     'disable_stitch' => false,
+                    'brand_content_toggle' => false,
+                    'brand_organic_toggle' => false,
+                    'video_cover_timestamp_ms' => 1000,
                 ],
                 'source_info' => [
                     'source' => 'FILE_UPLOAD',

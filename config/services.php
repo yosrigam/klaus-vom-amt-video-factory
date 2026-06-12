@@ -57,6 +57,8 @@ return [
         'client_secret' => env('TIKTOK_CLIENT_SECRET'),
         'access_token' => env('TIKTOK_ACCESS_TOKEN'),
         'refresh_token' => env('TIKTOK_REFRESH_TOKEN'),
+        'redirect_uri' => env('TIKTOK_REDIRECT_URI'),
+        'privacy_level' => env('TIKTOK_PRIVACY_LEVEL', 'SELF_ONLY'),
     ],
 
 ];
