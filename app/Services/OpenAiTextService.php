@@ -2,15 +2,14 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Http;
+use App\Support\OpenAiHttp;
 use RuntimeException;
 
 class OpenAiTextService
 {
     public function chat(string $systemPrompt, string $userPrompt, bool $json = true): array|string
     {
-        $response = Http::withToken(config('services.openai.api_key'))
-            ->timeout(120)
+        $response = OpenAiHttp::client()
             ->post('https://api.openai.com/v1/chat/completions', [
                 'model' => config('services.openai.model', 'gpt-4o-mini'),
                 'messages' => [

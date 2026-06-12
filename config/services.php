@@ -35,8 +35,19 @@ return [
         ],
     ],
 
+    'elevenlabs' => [
+        'api_key' => env('ELEVENLABS_API_KEY'),
+        'voice_id' => env('ELEVENLABS_VOICE_ID'),
+        'intro_voice_id' => env('ELEVENLABS_INTRO_VOICE_ID'),
+        'model' => env('ELEVENLABS_MODEL', 'eleven_multilingual_v2'),
+        'stability' => env('ELEVENLABS_STABILITY', 0.45),
+        'similarity_boost' => env('ELEVENLABS_SIMILARITY_BOOST', 0.8),
+        'style' => env('ELEVENLABS_STYLE', 0.15),
+    ],
+
     'openai' => [
         'api_key' => env('OPENAI_API_KEY'),
+        'organization' => env('OPENAI_ORGANIZATION'),
         'model' => env('OPENAI_MODEL', 'gpt-4o-mini'),
         'image_model' => env('OPENAI_IMAGE_MODEL', 'gpt-image-1'),
     ],

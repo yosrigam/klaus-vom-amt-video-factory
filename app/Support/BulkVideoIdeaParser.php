@@ -29,20 +29,12 @@ class BulkVideoIdeaParser
      */
     private static function extractBlocks(string $text): array
     {
-        $parts = preg_split('/\*\*/', $text) ?: [];
-        array_shift($parts);
+        preg_match_all('/\[\[(.*?)\]\]/s', $text, $matches);
 
-        $blocks = [];
-
-        for ($i = 0; $i < count($parts); $i += 2) {
-            $block = trim($parts[$i]);
-
-            if ($block !== '') {
-                $blocks[] = $block;
-            }
-        }
-
-        return $blocks;
+        return array_values(array_filter(
+            array_map('trim', $matches[1] ?? []),
+            fn (string $block): bool => $block !== '',
+        ));
     }
 
     /**

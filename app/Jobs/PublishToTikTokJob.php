@@ -3,8 +3,6 @@
 namespace App\Jobs;
 
 use App\Enums\SocialPostStatus;
-use App\Enums\WorkflowStep;
-use App\Jobs\Concerns\TracksWorkflowRun;
 use App\Models\SocialPost;
 use App\Services\TikTokPublisherService;
 use App\Services\VideoPublishService;
@@ -15,7 +13,6 @@ use Throwable;
 class PublishToTikTokJob implements ShouldQueue
 {
     use Queueable;
-    use TracksWorkflowRun;
 
     public int $timeout = 600;
 
@@ -25,7 +22,6 @@ class PublishToTikTokJob implements ShouldQueue
     {
         $idea = $this->socialPost->videoIdea;
         $account = $this->socialPost->socialAccount;
-        $run = $this->startWorkflowRun($idea, WorkflowStep::Publishing, ['platform' => 'tiktok']);
 
         try {
             $this->socialPost->update(['status' => SocialPostStatus::Uploading, 'error_message' => null]);
@@ -38,11 +34,10 @@ class PublishToTikTokJob implements ShouldQueue
                 'published_at' => now(),
             ]);
 
-            $this->completeWorkflowRun($result);
             $publishService->markPublishedIfComplete($idea);
         } catch (Throwable $exception) {
             $this->socialPost->markFailed($exception->getMessage());
-            $this->failWorkflowRun($exception, $idea);
+            $idea?->markFailed($exception->getMessage());
             throw $exception;
         }
     }

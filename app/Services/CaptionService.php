@@ -2,63 +2,120 @@
 
 namespace App\Services;
 
+use App\Support\AudioProbe;
+use App\Support\ScriptPhrases;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
+use RuntimeException;
 
 class CaptionService
 {
-    public function generateFromScript(string $script, string $directory = 'klaus/captions', float $secondsPerLine = 2.8): string
+    public function __construct(
+        protected WordHighlightCaptionRenderer $phraseRenderer,
+    ) {}
+
+    public function generateFromScript(string $script, ?string $audioPath = null, string $directory = 'klaus/captions'): string
     {
-        $sentences = preg_split('/(?<=[.!?])\s+/', trim($script)) ?: [trim($script)];
-        $sentences = array_values(array_filter(array_map('trim', $sentences)));
+        $phraseTimings = $this->loadPhraseTimings($script, $audioPath);
 
-        $entries = [];
-        $start = 0.0;
-
-        foreach ($sentences as $sentence) {
-            $duration = max(1.5, min(4.5, $secondsPerLine + (strlen($sentence) / 80)));
-            $end = $start + $duration;
-
-            $entries[] = [
-                'start' => $start,
-                'end' => $end,
-                'text' => $sentence,
-            ];
-
-            $start = $end + 0.15;
+        if ($phraseTimings === []) {
+            throw new RuntimeException('Phrase timings are required for caption generation. Regenerate voice first.');
         }
 
-        $srt = $this->toSrt($entries);
-        $path = $directory.'/'.uniqid('captions_', true).'.srt';
-        Storage::disk('local')->put($path, $srt);
+        $runId = uniqid('captions_', true);
+        $runDirectory = $directory.'/'.$runId;
+        $disk = Storage::disk('local');
+        $disk->makeDirectory($runDirectory);
 
-        return $path;
+        $segments = [];
+        $maxBandHeight = 0;
+
+        foreach ($phraseTimings as $index => $phraseTiming) {
+            $imageName = sprintf('seg_%04d.png', $index + 1);
+            $imagePath = $runDirectory.'/'.$imageName;
+            $line = trim((string) ($phraseTiming['text'] ?? ''));
+
+            if ($line === '') {
+                continue;
+            }
+
+            $dimensions = $this->phraseRenderer->renderPhrase(
+                $line,
+                $disk->path($imagePath),
+            );
+
+            $maxBandHeight = max($maxBandHeight, $dimensions['height']);
+
+            $segments[] = [
+                'start' => round((float) $phraseTiming['start'], 3),
+                'end' => round((float) $phraseTiming['end'], 3),
+                'line' => $line,
+                'image' => $imageName,
+                'height' => $dimensions['height'],
+                'overlay_y' => $this->overlayY($dimensions['height']),
+            ];
+        }
+
+        $manifest = [
+            'version' => 2,
+            'style' => 'phrase',
+            'width' => (int) config('klaus.video_width', 1080),
+            'height' => (int) config('klaus.video_height', 1920),
+            'overlay_y' => $this->overlayY($maxBandHeight),
+            'segments' => $segments,
+        ];
+
+        $manifestPath = $runDirectory.'/manifest.json';
+        $disk->put($manifestPath, json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+
+        return $manifestPath;
     }
 
     /**
-     * @param  array<int, array{start: float, end: float, text: string}>  $entries
+     * @return array<int, array{text: string, start: float, end: float}>
      */
-    protected function toSrt(array $entries): string
+    protected function loadPhraseTimings(string $script, ?string $audioPath): array
     {
-        $lines = [];
-
-        foreach ($entries as $index => $entry) {
-            $lines[] = (string) ($index + 1);
-            $lines[] = $this->formatTimestamp($entry['start']).' --> '.$this->formatTimestamp($entry['end']);
-            $lines[] = Str::upper($entry['text']);
-            $lines[] = '';
+        if ($audioPath === null || ! Storage::disk('local')->exists($audioPath)) {
+            return [];
         }
 
-        return implode("\n", $lines);
+        $sidecarPath = AudioProbe::timingSidecarPath($audioPath);
+
+        if (! Storage::disk('local')->exists($sidecarPath)) {
+            return [];
+        }
+
+        $payload = json_decode((string) Storage::disk('local')->get($sidecarPath), true);
+
+        if (! is_array($payload) || ! is_array($payload['phrases'] ?? null)) {
+            return [];
+        }
+
+        $timedPhrases = $payload['phrases'];
+        $scriptPhrases = ScriptPhrases::split($script);
+
+        if (count($timedPhrases) !== count($scriptPhrases)) {
+            throw new RuntimeException('Caption phrase count does not match voice phrase count. Regenerate voice.');
+        }
+
+        $normalized = [];
+
+        foreach ($timedPhrases as $index => $phraseTiming) {
+            $normalized[] = [
+                'text' => (string) ($phraseTiming['text'] ?? $scriptPhrases[$index] ?? ''),
+                'start' => (float) ($phraseTiming['start'] ?? 0.0),
+                'end' => (float) ($phraseTiming['end'] ?? 0.0),
+            ];
+        }
+
+        return $normalized;
     }
 
-    protected function formatTimestamp(float $seconds): string
+    protected function overlayY(int $bandHeight): int
     {
-        $hours = floor($seconds / 3600);
-        $minutes = floor(($seconds % 3600) / 60);
-        $secs = floor($seconds % 60);
-        $millis = (int) round(($seconds - floor($seconds)) * 1000);
+        $videoHeight = (int) config('klaus.video_height', 1920);
+        $marginBottom = (int) config('klaus.captions.margin_bottom', 320);
 
-        return sprintf('%02d:%02d:%02d,%03d', $hours, $minutes, $secs, $millis);
+        return max(0, $videoHeight - $marginBottom - $bandHeight);
     }
 }

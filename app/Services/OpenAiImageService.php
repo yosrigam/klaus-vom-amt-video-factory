@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Support\KlausImagePrompt;
+use App\Support\OpenAiHttp;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
@@ -10,11 +12,10 @@ class OpenAiImageService
 {
     public function generateAndStore(string $prompt, string $directory = 'klaus/images'): string
     {
-        $response = Http::withToken(config('services.openai.api_key'))
-            ->timeout(180)
+        $response = OpenAiHttp::client(180)
             ->post('https://api.openai.com/v1/images/generations', [
                 'model' => config('services.openai.image_model', 'gpt-image-1'),
-                'prompt' => $prompt,
+                'prompt' => KlausImagePrompt::buildForApi($prompt),
                 'size' => '1024x1536',
                 'quality' => 'medium',
             ]);

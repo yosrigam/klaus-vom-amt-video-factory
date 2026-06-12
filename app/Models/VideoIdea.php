@@ -37,11 +37,6 @@ class VideoIdea extends Model
         ];
     }
 
-    public function workflowRuns(): HasMany
-    {
-        return $this->hasMany(WorkflowRun::class);
-    }
-
     public function socialPosts(): HasMany
     {
         return $this->hasMany(SocialPost::class);
