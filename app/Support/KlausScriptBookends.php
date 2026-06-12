@@ -115,6 +115,21 @@ class KlausScriptBookends
         return trim(implode("\n\n", $filtered));
     }
 
+    public static function matchesIntro(string $phrase): bool
+    {
+        $normalize = static fn (string $value): string => mb_strtolower(trim($value, " \t\n\r\0\x0B."));
+
+        $normalized = $normalize($phrase);
+
+        foreach ([self::intro(), 'Klaus vom Amt here'] as $candidate) {
+            if ($normalized === $normalize($candidate)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public static function matchesOutro(string $phrase): bool
     {
         $normalize = static fn (string $value): string => mb_strtolower(trim($value, " \t\n\r\0\x0B."));

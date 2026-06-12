@@ -4,11 +4,11 @@ namespace App\Services\Concerns;
 
 use App\Enums\NarrationStyle;
 use App\Support\AudioProbe;
-use App\Support\KlausScriptBookends;
+use App\Support\KlausDeliveryClassifier;
 use App\Support\NarrationProfile;
 use App\Support\NarrationScriptParser;
 use App\Support\NarrationSegment;
-use App\Support\ScriptPhrases;
+use App\Support\PhraseDelivery;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 use Symfony\Component\Process\Process;
@@ -16,6 +16,8 @@ use Symfony\Component\Process\Process;
 trait SynthesizesPhrasesToAudio
 {
     protected ?NarrationProfile $narrationProfile = null;
+
+    protected ?PhraseDelivery $currentPhraseDelivery = null;
 
     public function synthesize(
         string $text,
@@ -64,7 +66,7 @@ trait SynthesizesPhrasesToAudio
     protected function synthesizeChunked(string $text, string $absoluteOutputPath): void
     {
         $profile = $this->narrationProfile ?? NarrationProfile::for(NarrationStyle::Default);
-        $segments = NarrationScriptParser::parse($text, $profile);
+        $segments = KlausDeliveryClassifier::annotate(NarrationScriptParser::parse($text, $profile));
 
         if ($segments === []) {
             throw new RuntimeException('Voice text is empty.');
@@ -77,17 +79,14 @@ trait SynthesizesPhrasesToAudio
 
         if (count($speechSegments) === 1 && count($segments) === 1) {
             $phrase = $speechSegments[0]->text;
+            $voice = $this->voiceNameForPhrase(0, 1, $phrase);
+            $this->currentPhraseDelivery = PhraseDelivery::fromSegment($speechSegments[0], $voice);
             $this->synthesizePhraseAudio($phrase, $absoluteOutputPath, 0, 1, $phrase);
             $this->trimTrailingSilence($absoluteOutputPath);
+            $duration = AudioProbe::durationSeconds($absoluteOutputPath) ?? 0.0;
             $this->writeTimingSidecar(
                 $this->relativePathFromAbsolute($absoluteOutputPath),
-                [
-                    [
-                        'text' => $phrase,
-                        'start' => 0.0,
-                        'end' => AudioProbe::durationSeconds($absoluteOutputPath) ?? 0.0,
-                    ],
-                ],
+                [$this->phraseTimingEntry($speechSegments[0], $voice, 0.0, $duration)],
             );
 
             return;
@@ -114,7 +113,20 @@ trait SynthesizesPhrasesToAudio
                     continue;
                 }
 
+                $previousSegment = $segments[$segmentIndex - 1] ?? null;
+                $gapBefore = $this->gapBeforeSpeech($segment, $previousSegment);
+
+                if ($gapBefore > 0) {
+                    $pausePath = $disk->path($tmpDir.'/pre_pause_'.$segmentIndex.'.mp3');
+                    $this->generateSilence($gapBefore, $pausePath);
+                    $concatEntries[] = $this->concatFileEntry($pausePath);
+                    $timelineCursor += $gapBefore;
+                }
+
+                $voice = $this->voiceNameForPhrase($speechIndex, $speechCount, $segment->text);
+
                 $chunkPath = $disk->path($tmpDir.'/chunk_'.$segmentIndex.'.mp3');
+                $this->currentPhraseDelivery = PhraseDelivery::fromSegment($segment, $voice);
                 $this->synthesizePhraseAudio(
                     $segment->text,
                     $chunkPath,
@@ -124,31 +136,18 @@ trait SynthesizesPhrasesToAudio
                 );
                 $this->trimTrailingSilence($chunkPath);
                 $chunkDuration = AudioProbe::durationSeconds($chunkPath) ?? 0.0;
+                $phraseStart = $timelineCursor;
 
-                $phraseTimings[] = [
-                    'text' => $segment->text,
-                    'start' => round($timelineCursor, 3),
-                    'end' => round($timelineCursor + $chunkDuration, 3),
-                ];
+                $phraseTimings[] = $this->phraseTimingEntry(
+                    $segment,
+                    $voice,
+                    $phraseStart,
+                    $phraseStart + $chunkDuration,
+                );
 
                 $timelineCursor += $chunkDuration;
                 $concatEntries[] = $this->concatFileEntry($chunkPath);
                 $speechIndex++;
-
-                $nextSegment = $segments[$segmentIndex + 1] ?? null;
-
-                if ($nextSegment === null) {
-                    continue;
-                }
-
-                $pauseSeconds = $this->pauseBeforeSegment($segment, $nextSegment, $segments, $segmentIndex, $speechCount);
-
-                if ($pauseSeconds > 0) {
-                    $pausePath = $disk->path($tmpDir.'/pause_'.$segmentIndex.'.mp3');
-                    $this->generateSilence($pauseSeconds, $pausePath);
-                    $concatEntries[] = $this->concatFileEntry($pausePath);
-                    $timelineCursor += $pauseSeconds;
-                }
             }
 
             $listPath = $disk->path($tmpDir.'/concat.txt');
@@ -177,66 +176,74 @@ trait SynthesizesPhrasesToAudio
     }
 
     /**
-     * @param  array<int, NarrationSegment>  $segments
+     * One silence gap between phrases — never stack pause_after on phrase N with pause_before on N+1.
      */
-    protected function pauseBeforeSegment(
-        NarrationSegment $current,
-        NarrationSegment $next,
-        array $segments,
-        int $currentIndex,
-        int $speechCount,
-    ): float {
-        if ($next->isPause()) {
+    protected function gapBeforeSpeech(NarrationSegment $segment, ?NarrationSegment $previousSegment): float
+    {
+        if ($previousSegment === null) {
             return 0.0;
         }
 
-        if (! $current->isSpeech()) {
-            return 0.0;
+        if ($previousSegment->isPause()) {
+            return $segment->pauseBeforeSeconds;
         }
 
-        $profile = $this->narrationProfile ?? NarrationProfile::for(NarrationStyle::Default);
-
-        if ($next->followsLineBreak) {
-            $pause = $profile->lineBreakPauseSeconds;
-        } elseif ($currentIndex === 0) {
-            $pause = $profile->bookendPauseSeconds;
-        } else {
-            $speechSegments = array_values(array_filter($segments, static fn (NarrationSegment $segment) => $segment->isSpeech()));
-            $speechPositions = [];
-            $position = 0;
-
-            foreach ($segments as $index => $segment) {
-                if ($segment->isSpeech()) {
-                    $speechPositions[$index] = $position;
-                    $position++;
-                }
-            }
-
-            $currentSpeechIndex = $speechPositions[$currentIndex] ?? 0;
-            $nextSpeechIndex = $speechPositions[$currentIndex + 1] ?? ($speechCount - 1);
-            $nextPhrase = $next->text;
-
-            if (
-                $speechCount > 1
-                && $nextSpeechIndex === $speechCount - 1
-                && KlausScriptBookends::matchesOutro($nextPhrase)
-            ) {
-                $pause = $profile->bookendPauseSeconds;
-            } elseif (
-                ScriptPhrases::isShortPhrase($current->text)
-                || ScriptPhrases::isShortPhrase($nextPhrase)
-            ) {
-                $pause = $profile->shortPhrasePauseSeconds;
-            } else {
-                $pause = $profile->sentencePauseSeconds;
-            }
+        if (! $previousSegment->isSpeech()) {
+            return $segment->pauseBeforeSeconds;
         }
 
-        if ($current->isDramatic && $profile->dramaticPauseMultiplier > 1.0) {
-            $pause *= $profile->dramaticPauseMultiplier;
+        return max($previousSegment->pauseAfterSeconds, $segment->pauseBeforeSeconds);
+    }
+
+    protected function voiceNameForPhrase(int $phraseIndex, int $phraseCount, string $phrase): string
+    {
+        if (method_exists($this, 'voiceForPhrase')) {
+            return $this->voiceForPhrase($phraseIndex, $phraseCount, $phrase);
         }
 
-        return $pause;
+        return (string) config('klaus.edge_tts_voice', config('klaus.voice_profile.voice', 'en-GB-ThomasNeural'));
+    }
+
+    /**
+     * @return array{
+     *     phrase: string,
+     *     text: string,
+     *     style: string,
+     *     voice: string,
+     *     rate: string,
+     *     pitch: string,
+     *     volume: string,
+     *     pause_before: float,
+     *     pause_after: float,
+     *     start: float,
+     *     end: float,
+     *     starts_at: float,
+     *     ends_at: float,
+     * }
+     */
+    protected function phraseTimingEntry(
+        NarrationSegment $segment,
+        string $voice,
+        float $start,
+        float $end,
+    ): array {
+        $delivery = PhraseDelivery::fromSegment($segment, $voice);
+
+        return [
+            'phrase' => $segment->text,
+            'text' => $segment->text,
+            'style' => $delivery->style->value,
+            'voice' => $voice,
+            'rate' => $delivery->rate,
+            'pitch' => $delivery->pitch,
+            'volume' => $delivery->volume,
+            'pause_before' => round($delivery->pauseBeforeSeconds, 3),
+            'pause_after' => round($delivery->pauseAfterSeconds, 3),
+            'start' => round($start, 3),
+            'end' => round($end, 3),
+            'starts_at' => round($start, 3),
+            'ends_at' => round($end, 3),
+        ];
     }
 
     protected function normalizeLoudness(string $absoluteOutputPath): void
@@ -268,14 +275,14 @@ trait SynthesizesPhrasesToAudio
     }
 
     /**
-     * @param  array<int, array{text: string, start: float, end: float}>  $phrases
+     * @param  array<int, array<string, mixed>>  $phrases
      */
     protected function writeTimingSidecar(string $audioRelativePath, array $phrases): void
     {
         $sidecarPath = AudioProbe::timingSidecarPath($audioRelativePath);
 
         Storage::disk('local')->put($sidecarPath, json_encode([
-            'version' => 1,
+            'version' => 2,
             'phrases' => $phrases,
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
     }

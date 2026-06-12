@@ -47,7 +47,7 @@ class NarrationScriptParser
             }
 
             $markerKey = strtolower($matches[1][$index][0]);
-            $pauseSeconds = (float) ($markers[$markerKey] ?? 0.8);
+            $pauseSeconds = KlausVoiceProfile::scalePause((float) ($markers[$markerKey] ?? 0.8));
             $segments[] = new NarrationSegment(
                 NarrationSegmentKind::Pause,
                 pauseSeconds: $pauseSeconds,
@@ -81,13 +81,13 @@ class NarrationScriptParser
             }
 
             $lines = preg_split("/\R/u", $segment->text) ?: [$segment->text];
-            $pendingLineBreak = false;
+            $pendingBlankLines = 0;
 
             foreach ($lines as $line) {
                 $line = trim($line);
 
                 if ($line === '') {
-                    $pendingLineBreak = true;
+                    $pendingBlankLines++;
 
                     continue;
                 }
@@ -96,10 +96,12 @@ class NarrationScriptParser
                     $expanded[] = new NarrationSegment(
                         NarrationSegmentKind::Speech,
                         $sentence,
-                        followsLineBreak: $pendingLineBreak,
+                        followsLineBreak: $pendingBlankLines >= 1,
+                        followsParagraphBreak: $pendingBlankLines >= 2,
                     );
-                    $pendingLineBreak = false;
                 }
+
+                $pendingBlankLines = 0;
             }
         }
 
@@ -173,6 +175,7 @@ class NarrationScriptParser
                 kind: NarrationSegmentKind::Speech,
                 text: $segment->text,
                 followsLineBreak: $segment->followsLineBreak,
+                followsParagraphBreak: $segment->followsParagraphBreak,
                 isDramatic: self::isDramaticPhrase($segment->text),
             );
         }, $merged));
@@ -206,6 +209,7 @@ class NarrationScriptParser
                     NarrationSegmentKind::Speech,
                     $text,
                     followsLineBreak: $index === 0 ? $group[0]->followsLineBreak : false,
+                    followsParagraphBreak: $index === 0 ? $group[0]->followsParagraphBreak : false,
                 );
             }
 

@@ -45,7 +45,7 @@ class NarrationScriptParserTest extends TestCase
         $pause = collect($segments)->first(static fn ($segment) => $segment->isPause());
 
         $this->assertNotNull($pause);
-        $this->assertSame(0.45, $pause->pauseSeconds);
+        $this->assertSame((float) config('klaus.beat_markers.pause'), $pause->pauseSeconds);
     }
 
     #[Test]

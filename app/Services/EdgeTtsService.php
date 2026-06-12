@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Services\Concerns\SynthesizesPhrasesToAudio;
 use App\Support\KlausScriptBookends;
+use App\Support\TtsRate;
 use App\Support\TtsVoice;
 use RuntimeException;
 use Symfony\Component\Process\Process;
@@ -20,6 +21,7 @@ class EdgeTtsService
         string $phrase,
     ): void {
         $profile = $this->narrationProfile;
+        $delivery = $this->currentPhraseDelivery;
 
         $command = [
             config('klaus.edge_tts_path'),
@@ -28,10 +30,12 @@ class EdgeTtsService
             '--write-media', $absoluteOutputPath,
         ];
 
+        $fallbackRate = TtsRate::withGlobalOffset('-4%');
+
         foreach ([
-            'rate' => $profile?->rate ?? config('klaus.edge_tts_rate'),
-            'pitch' => $profile?->pitch ?? config('klaus.edge_tts_pitch'),
-            'volume' => $profile?->volume ?? config('klaus.edge_tts_volume'),
+            'rate' => $delivery?->rate ?? $fallbackRate,
+            'pitch' => $delivery?->pitch ?? $profile?->pitch ?? config('klaus.edge_tts_pitch'),
+            'volume' => $delivery?->volume ?? $profile?->volume ?? config('klaus.edge_tts_volume'),
         ] as $option => $value) {
             if (is_string($value) && $value !== '') {
                 $command[] = "--{$option}={$value}";
