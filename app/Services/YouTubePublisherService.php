@@ -2,19 +2,20 @@
 
 namespace App\Services;
 
+use App\Contracts\PublishableVideo;
 use App\Models\SocialAccount;
 use App\Models\SocialPost;
-use App\Models\VideoIdea;
+use App\Support\PublicVideoUrl;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 
 class YouTubePublisherService
 {
-    public function publish(VideoIdea $idea, SocialPost $post, SocialAccount $account): array
+    public function publish(PublishableVideo $video, SocialPost $post, SocialAccount $account): array
     {
         $accessToken = $this->resolveAccessToken($account);
-        $videoPath = Storage::disk('local')->path($idea->video_path);
+        $videoPath = Storage::disk('local')->path((string) $video->publishVideoPath());
 
         if (! file_exists($videoPath)) {
             throw new RuntimeException('Video file not found for YouTube upload.');
@@ -22,9 +23,9 @@ class YouTubePublisherService
 
         $metadata = [
             'snippet' => [
-                'title' => $idea->publish_title ?? $idea->title,
-                'description' => $this->buildDescription($idea),
-                'tags' => $idea->hashtags ?? [],
+                'title' => $video->publishTitle(),
+                'description' => $this->buildDescription($video),
+                'tags' => $video->publishHashtags(),
                 'categoryId' => '23',
             ],
             'status' => [
@@ -105,10 +106,10 @@ class YouTubePublisherService
         return $token;
     }
 
-    protected function buildDescription(VideoIdea $idea): string
+    protected function buildDescription(PublishableVideo $video): string
     {
-        $tags = collect($idea->hashtags ?? [])->map(fn ($tag) => '#'.ltrim($tag, '#'))->implode(' ');
+        $tags = collect($video->publishHashtags())->map(fn ($tag) => '#'.ltrim($tag, '#'))->implode(' ');
 
-        return trim(($idea->publish_description ?? $idea->short_concept)."\n\n".$tags."\n\n".config('klaus.disclaimer'));
+        return trim($video->publishDescription()."\n\n".$tags."\n\n".config('klaus.disclaimer'));
     }
 }

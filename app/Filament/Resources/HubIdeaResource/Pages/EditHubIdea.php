@@ -3,12 +3,14 @@
 namespace App\Filament\Resources\HubIdeaResource\Pages;
 
 use App\Enums\HubIdeaStatus;
+use App\Enums\SocialPlatform;
 use App\Filament\Resources\HubIdeaResource;
 use App\Filament\Resources\HubIdeaResource\HubIdeaForm;
 use App\Jobs\GenerateHubPromptsJob;
 use App\Jobs\HubGenerateCaptionsJob;
 use App\Jobs\HubGenerateImageJob;
 use App\Jobs\HubGenerateVoiceJob;
+use App\Services\HubPublishService;
 use App\Support\BackgroundMusic;
 use App\Support\BackgroundMusicOptions;
 use App\Support\CopyToClipboardAlpine;
@@ -46,6 +48,11 @@ class EditHubIdea extends EditRecord
                 'captions' => $this->generateCaptionsAction(),
                 'music' => $this->chooseRandomBackgroundMusicAction(),
                 'video' => $this->produceVideoAction(),
+            ],
+            publishHeaderActions: fn (): array => [
+                $this->publishYouTubeAction(),
+                $this->publishInstagramAction(),
+                $this->publishTikTokAction(),
             ],
             onBackgroundMusicChanged: fn (?string $path): mixed => $this->saveBackgroundMusicPath($path),
             onImagePathChanged: fn (?string $path): mixed => $this->saveImagePath($path),
@@ -200,6 +207,40 @@ class EditHubIdea extends EditRecord
             ->action(function (): void {
                 HubIdeaWorkflow::dispatchRetry($this->record);
                 $this->notifySuccess('Retry queued.');
+            });
+    }
+
+    protected function publishYouTubeAction(): Action
+    {
+        return $this->publishPlatformAction(SocialPlatform::Youtube, 'Post to YouTube', 'success');
+    }
+
+    protected function publishInstagramAction(): Action
+    {
+        return $this->publishPlatformAction(SocialPlatform::Instagram, 'Post to Instagram', 'warning');
+    }
+
+    protected function publishTikTokAction(): Action
+    {
+        return $this->publishPlatformAction(SocialPlatform::Tiktok, 'Post to TikTok', 'info');
+    }
+
+    protected function publishPlatformAction(SocialPlatform $platform, string $label, string $color): Action
+    {
+        return Action::make('publish_'.$platform->value)
+            ->label($label)
+            ->color($color)
+            ->requiresConfirmation()
+            ->visible(fn (): bool => filled($this->record->video_path))
+            ->action(function () use ($platform): void {
+                try {
+                    app(HubPublishService::class)->dispatch($this->record, $platform);
+                    $this->record->refresh();
+                    $this->fillForm();
+                    $this->notifySuccess($platform->label().' upload queued. Run the queue worker if posts stay pending.');
+                } catch (\RuntimeException $exception) {
+                    Notification::make()->title($exception->getMessage())->danger()->send();
+                }
             });
     }
 

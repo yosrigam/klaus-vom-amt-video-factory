@@ -2,11 +2,12 @@
 
 namespace App\Models;
 
+use App\Contracts\PublishableVideo;
 use App\Enums\VideoIdeaStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class VideoIdea extends Model
+class VideoIdea extends Model implements PublishableVideo
 {
     protected $fillable = [
         'content_pillar',
@@ -60,5 +61,25 @@ class VideoIdea extends Model
     public function clearError(): void
     {
         $this->update(['error_message' => null]);
+    }
+
+    public function publishVideoPath(): ?string
+    {
+        return $this->video_path;
+    }
+
+    public function publishTitle(): string
+    {
+        return (string) ($this->publish_title ?? $this->title);
+    }
+
+    public function publishDescription(): string
+    {
+        return (string) ($this->publish_description ?? $this->short_concept);
+    }
+
+    public function publishHashtags(): array
+    {
+        return $this->hashtags ?? [];
     }
 }

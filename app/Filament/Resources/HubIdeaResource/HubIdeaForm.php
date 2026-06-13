@@ -32,6 +32,7 @@ class HubIdeaForm
      * @param  (Closure(): array<int, mixed>)|null  $step2HeaderActions
      * @param  (Closure(): array<int, mixed>)|null  $step3HeaderActions
      * @param  (Closure(): array<int, mixed>)|null  $step4HeaderActions
+     * @param  (Closure(): array<int, mixed>)|null  $publishHeaderActions
      * @param  (Closure(): array<string, Action>)|null  $productionFieldActions
      * @param  (Closure(?string): void)|null  $onBackgroundMusicChanged
      * @param  (Closure(): Action)|null  $copyImagePromptAction
@@ -43,6 +44,7 @@ class HubIdeaForm
         ?Closure $step2HeaderActions = null,
         ?Closure $step3HeaderActions = null,
         ?Closure $step4HeaderActions = null,
+        ?Closure $publishHeaderActions = null,
         ?Closure $productionFieldActions = null,
         ?Closure $onBackgroundMusicChanged = null,
         ?Closure $onImagePathChanged = null,
@@ -104,6 +106,18 @@ class HubIdeaForm
                             $onBackgroundMusicChanged,
                         )
                         : [static::lockedPlaceholder('step_4_locked', 'Step 3 — Image')])
+                    ->columnSpanFull(),
+
+                Section::make('Step 5 — Publish')
+                    ->description('Post the finished MP4 to connected social accounts. Requires queue worker and API credentials.')
+                    ->visible(fn (?HubIdea $record): bool => filled($record?->video_path))
+                    ->headerActions(static::headerActions($publishHeaderActions))
+                    ->schema([
+                        Placeholder::make('publish_status')
+                            ->label('Publish status')
+                            ->content(fn (?HubIdea $record): string => $record?->publishStatusSummary() ?? 'Not published yet.')
+                            ->columnSpanFull(),
+                    ])
                     ->columnSpanFull(),
 
                 Section::make('Errors')

@@ -2,19 +2,20 @@
 
 namespace App\Services;
 
+use App\Contracts\PublishableVideo;
 use App\Models\SocialAccount;
 use App\Models\SocialPost;
-use App\Models\VideoIdea;
+use App\Support\PublicVideoUrl;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
 class InstagramPublisherService
 {
-    public function publish(VideoIdea $idea, SocialPost $post, SocialAccount $account): array
+    public function publish(PublishableVideo $video, SocialPost $post, SocialAccount $account): array
     {
         $accessToken = $account->access_token ?: config('services.instagram.access_token');
         $igUserId = $account->metadata['ig_user_id'] ?? config('services.instagram.ig_user_id');
-        $videoUrl = $this->publicVideoUrl($idea);
+        $videoUrl = PublicVideoUrl::forPath((string) $video->publishVideoPath());
 
         if (! $accessToken || ! $igUserId) {
             throw new RuntimeException('Instagram credentials missing.');
@@ -23,7 +24,7 @@ class InstagramPublisherService
         $container = Http::post("https://graph.facebook.com/v21.0/{$igUserId}/media", [
             'media_type' => 'REELS',
             'video_url' => $videoUrl,
-            'caption' => $this->buildCaption($idea),
+            'caption' => $this->buildCaption($video),
             'access_token' => $accessToken,
         ]);
 
@@ -75,17 +76,10 @@ class InstagramPublisherService
         throw new RuntimeException('Instagram media processing timed out.');
     }
 
-    protected function publicVideoUrl(VideoIdea $idea): string
+    protected function buildCaption(PublishableVideo $video): string
     {
-        $base = rtrim((string) (config('klaus.public_video_base_url') ?: config('app.url')), '/');
+        $tags = collect($video->publishHashtags())->map(fn ($tag) => '#'.ltrim($tag, '#'))->implode(' ');
 
-        return $base.route('klaus.media', ['path' => $idea->video_path], false);
-    }
-
-    protected function buildCaption(VideoIdea $idea): string
-    {
-        $tags = collect($idea->hashtags ?? [])->map(fn ($tag) => '#'.ltrim($tag, '#'))->implode(' ');
-
-        return trim(($idea->publish_description ?? $idea->short_concept)."\n\n".$tags);
+        return trim($video->publishDescription()."\n\n".$tags);
     }
 }

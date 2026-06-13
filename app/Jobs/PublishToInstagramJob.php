@@ -20,12 +20,12 @@ class PublishToInstagramJob implements ShouldQueue
 
     public function handle(InstagramPublisherService $publisher, VideoPublishService $publishService): void
     {
-        $idea = $this->socialPost->videoIdea;
+        $publishable = $this->socialPost->publishable();
         $account = $this->socialPost->socialAccount;
 
         try {
             $this->socialPost->update(['status' => SocialPostStatus::Uploading, 'error_message' => null]);
-            $result = $publisher->publish($idea, $this->socialPost, $account);
+            $result = $publisher->publish($publishable, $this->socialPost, $account);
 
             $this->socialPost->update([
                 'status' => SocialPostStatus::Published,
@@ -34,10 +34,13 @@ class PublishToInstagramJob implements ShouldQueue
                 'published_at' => now(),
             ]);
 
-            $publishService->markPublishedIfComplete($idea);
+            if ($this->socialPost->video_idea_id !== null) {
+                $publishService->markPublishedIfComplete($this->socialPost->videoIdea);
+            }
         } catch (Throwable $exception) {
             $this->socialPost->markFailed($exception->getMessage());
-            $idea?->markFailed($exception->getMessage());
+            $this->socialPost->videoIdea?->markFailed($exception->getMessage());
+            $this->socialPost->hubIdea?->markFailed($exception->getMessage());
             throw $exception;
         }
     }

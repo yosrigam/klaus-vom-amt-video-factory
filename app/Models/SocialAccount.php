@@ -48,4 +48,47 @@ class SocialAccount extends Model
             ->where('is_active', true)
             ->first();
     }
+
+    public static function resolveForPlatform(SocialPlatform $platform): self
+    {
+        $account = static::activeForPlatform($platform);
+
+        if ($account !== null) {
+            return $account;
+        }
+
+        $fromEnvironment = static::credentialsFromEnvironment($platform);
+
+        if ($fromEnvironment === null) {
+            throw new RuntimeException(
+                "No active {$platform->label()} account. Add one under Social Accounts in the admin, or set the platform credentials in .env.",
+            );
+        }
+
+        return static::query()->updateOrCreate(
+            ['platform' => $platform, 'name' => 'Default (.env)'],
+            $fromEnvironment + ['is_active' => true],
+        );
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    protected static function credentialsFromEnvironment(SocialPlatform $platform): ?array
+    {
+        return match ($platform) {
+            SocialPlatform::Youtube => filled(config('services.youtube.refresh_token')) ? [
+                'refresh_token' => config('services.youtube.refresh_token'),
+            ] : null,
+            SocialPlatform::Instagram => filled(config('services.instagram.access_token'))
+                && filled(config('services.instagram.ig_user_id')) ? [
+                    'access_token' => config('services.instagram.access_token'),
+                    'metadata' => ['ig_user_id' => config('services.instagram.ig_user_id')],
+                ] : null,
+            SocialPlatform::Tiktok => filled(config('services.tiktok.access_token')) ? [
+                'access_token' => config('services.tiktok.access_token'),
+                'refresh_token' => config('services.tiktok.refresh_token'),
+            ] : null,
+        };
+    }
 }

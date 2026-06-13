@@ -2,9 +2,15 @@
 
 namespace App\Models;
 
+use App\Contracts\PublishableVideo;
 use App\Enums\HubIdeaStatus;
+use App\Enums\SocialPostStatus;
+use App\Support\KlausScriptBookends;
 use Illuminate\Database\Eloquent\Model;
-class HubIdea extends Model
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
+
+class HubIdea extends Model implements PublishableVideo
 {
     protected $fillable = [
         'idea_text',
@@ -83,5 +89,59 @@ class HubIdea extends Model
         if ($this->hasProductionContent()) {
             $this->update(['status' => HubIdeaStatus::ContentReady]);
         }
+    }
+
+    public function socialPosts(): HasMany
+    {
+        return $this->hasMany(SocialPost::class);
+    }
+
+    public function publishVideoPath(): ?string
+    {
+        return $this->video_path;
+    }
+
+    public function publishTitle(): string
+    {
+        if (filled($this->title)) {
+            return (string) $this->title;
+        }
+
+        return Str::limit((string) $this->idea_text, 100, '…');
+    }
+
+    public function publishDescription(): string
+    {
+        $body = KlausScriptBookends::sanitizeBody((string) ($this->script ?? ''));
+
+        if ($body !== '') {
+            return Str::limit($body, 5000);
+        }
+
+        return Str::limit((string) $this->idea_text, 500);
+    }
+
+    public function publishHashtags(): array
+    {
+        return [];
+    }
+
+    public function publishStatusSummary(): string
+    {
+        $posts = $this->socialPosts()->get();
+
+        if ($posts->isEmpty()) {
+            return 'Not published yet.';
+        }
+
+        return $posts
+            ->map(fn (SocialPost $post): string => sprintf(
+                '%s: %s',
+                $post->platform->label(),
+                $post->status === SocialPostStatus::Published
+                    ? ($post->platform_url ?? 'published')
+                    : $post->status->value.($post->error_message ? ' — '.$post->error_message : ''),
+            ))
+            ->implode("\n");
     }
 }

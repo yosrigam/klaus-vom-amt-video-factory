@@ -2,16 +2,16 @@
 
 namespace App\Services;
 
+use App\Contracts\PublishableVideo;
 use App\Models\SocialAccount;
 use App\Models\SocialPost;
-use App\Models\VideoIdea;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 
 class TikTokPublisherService
 {
-    public function publish(VideoIdea $idea, SocialPost $post, SocialAccount $account): array
+    public function publish(PublishableVideo $video, SocialPost $post, SocialAccount $account): array
     {
         $accessToken = $account->access_token ?: config('services.tiktok.access_token');
 
@@ -19,13 +19,13 @@ class TikTokPublisherService
             throw new RuntimeException('TikTok access token missing.');
         }
 
-        $videoPath = Storage::disk('local')->path($idea->video_path);
+        $videoPath = Storage::disk('local')->path((string) $video->publishVideoPath());
         $videoSize = filesize($videoPath);
 
         $init = Http::withToken($accessToken)
             ->post('https://open.tiktokapis.com/v2/post/publish/video/init/', [
                 'post_info' => [
-                    'title' => $idea->publish_title ?? $idea->title,
+                    'title' => $video->publishTitle(),
                     'privacy_level' => config('services.tiktok.privacy_level', 'SELF_ONLY'),
                     'disable_duet' => false,
                     'disable_comment' => false,
