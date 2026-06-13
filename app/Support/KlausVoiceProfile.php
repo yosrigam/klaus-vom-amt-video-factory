@@ -40,34 +40,34 @@ final class KlausVoiceProfile
 
         return self::normalizeDeliveryParams(match ($style) {
             KlausDeliveryStyle::NeutralObservation => [
-                'rate' => '-2%',
+                'rate' => '+2%',
                 'pitch' => '-2Hz',
                 'volume' => '+0%',
-                'pause_after' => 0.28,
+                'pause_after' => 0.08,
             ],
             KlausDeliveryStyle::MildConcern => [
-                'rate' => '-4%',
+                'rate' => '+0%',
                 'pitch' => '-1Hz',
                 'volume' => '+0%',
-                'pause_after' => 0.32,
+                'pause_after' => 0.10,
             ],
             KlausDeliveryStyle::Disappointed => [
-                'rate' => '-6%',
+                'rate' => '-2%',
                 'pitch' => '-4Hz',
                 'volume' => '-1%',
-                'pause_after' => 0.38,
+                'pause_after' => 0.12,
             ],
             KlausDeliveryStyle::Punchline => [
-                'rate' => '-8%',
+                'rate' => '-4%',
                 'pitch' => '-5Hz',
                 'volume' => '+1%',
-                'pause_after' => 0.55,
+                'pause_after' => 0.22,
             ],
             KlausDeliveryStyle::BureaucraticClosure => [
-                'rate' => '-10%',
+                'rate' => '-6%',
                 'pitch' => '-4Hz',
                 'volume' => '+0%',
-                'pause_after' => 0.65,
+                'pause_after' => 0.26,
             ],
         });
     }

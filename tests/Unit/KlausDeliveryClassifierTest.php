@@ -80,8 +80,8 @@ class KlausDeliveryClassifierTest extends TestCase
 
         $this->assertSame(KlausDeliveryStyle::NeutralObservation, $speech[0]->deliveryStyle);
         $this->assertSame(KlausDeliveryStyle::Disappointed, $speech[1]->deliveryStyle);
-        $this->assertSame(0.12, $speech[1]->pauseBeforeSeconds);
-        $this->assertSame('-6%', $speech[1]->rate);
+        $this->assertSame(0.0, $speech[1]->pauseBeforeSeconds);
+        $this->assertSame('-2%', $speech[1]->rate);
     }
 
     #[Test]
@@ -96,8 +96,8 @@ class KlausDeliveryClassifierTest extends TestCase
         $punchline = collect($segments)->last(static fn ($segment) => $segment->isSpeech());
 
         $this->assertSame(KlausDeliveryStyle::Punchline, $punchline->deliveryStyle);
-        $this->assertEqualsWithDelta(0.34, $punchline->pauseBeforeSeconds, 0.001);
-        $this->assertSame('-8%', $punchline->rate);
+        $this->assertEqualsWithDelta(0.10, $punchline->pauseBeforeSeconds, 0.001);
+        $this->assertSame('-4%', $punchline->rate);
         $this->assertSame('-5Hz', $punchline->pitch);
     }
 
@@ -151,7 +151,7 @@ class KlausDeliveryClassifierTest extends TestCase
 
         $finalOutro = $speech[count($speech) - 1];
         $this->assertSame(KlausDeliveryStyle::BureaucraticClosure, $finalOutro->deliveryStyle);
-        $this->assertSame('-10%', $finalOutro->rate);
+        $this->assertSame('-6%', $finalOutro->rate);
     }
 
     #[Test]

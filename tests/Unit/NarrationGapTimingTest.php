@@ -36,7 +36,7 @@ class NarrationGapTimingTest extends TestCase
             kind: NarrationSegmentKind::Speech,
             text: 'First line.',
             deliveryStyle: KlausDeliveryStyle::NeutralObservation,
-            pauseAfterSeconds: 0.28,
+            pauseAfterSeconds: 0.08,
         );
 
         $second = new NarrationSegment(
@@ -44,12 +44,11 @@ class NarrationGapTimingTest extends TestCase
             text: 'Second line.',
             followsLineBreak: true,
             deliveryStyle: KlausDeliveryStyle::NeutralObservation,
-            pauseBeforeSeconds: 0.12,
-            pauseAfterSeconds: 0.28,
+            pauseBeforeSeconds: 0.0,
+            pauseAfterSeconds: 0.08,
         );
 
         $this->assertSame(0.0, $synth->gap($first, null));
-        $this->assertSame(0.28, $synth->gap($second, $first));
-        $this->assertNotSame(0.40, $synth->gap($second, $first));
+        $this->assertSame(0.08, $synth->gap($second, $first));
     }
 }

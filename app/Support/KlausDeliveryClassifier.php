@@ -72,8 +72,6 @@ final class KlausDeliveryClassifier
 
                 if ($segment->followsParagraphBreak) {
                     $pauseBefore += KlausVoiceProfile::paragraphBreakPause();
-                } elseif ($segment->followsLineBreak) {
-                    $pauseBefore += KlausVoiceProfile::lineBreakPause();
                 }
 
                 if ($style === KlausDeliveryStyle::Punchline) {
